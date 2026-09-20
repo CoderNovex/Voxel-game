@@ -6,79 +6,142 @@
 <title>ARROW RAMPAGE — Tower Archer</title>
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%;background:#050b14;color:#eef5ff;font-family:"Courier New",monospace}
-body{display:grid;place-items:center;padding:18px;background:
-radial-gradient(circle at 50% -20%,#17314b 0,#091421 38%,#03070d 100%)}
-#wrap{width:min(100%,1320px);position:relative}
-header{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-bottom:10px;padding:8px 10px;border-bottom:2px solid #1b3954}
-h1{margin:0;font-size:26px;letter-spacing:.09em;color:#f4f7fb;text-shadow:3px 3px 0 #07111c}
-p{margin:4px 0 0;color:#7890a8;font-size:11px;letter-spacing:.06em}
-#stats{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
-.badge{background:linear-gradient(#142333,#0b131e);border:1px solid #31516d;border-radius:3px;padding:7px 11px;font-size:12px;box-shadow:inset 0 0 0 1px #07101a,0 4px 12px #0008}
-.badge b{color:#fff}
-canvas{display:block;width:100%;height:auto;aspect-ratio:16/10;background:#07111c;border:2px solid #29455e;border-radius:4px;box-shadow:0 16px 50px #000c, inset 0 0 0 1px #50718b;cursor:crosshair;image-rendering:auto}
-#controls{display:grid;grid-template-columns:repeat(5,minmax(145px,1fr));gap:7px;margin-top:9px}
-button{font:700 11px "Courier New",monospace;letter-spacing:.02em;border:1px solid #36546e;background:linear-gradient(#16283a,#0d1722);color:#eaf3fb;border-radius:3px;padding:10px 9px;cursor:pointer;box-shadow:inset 0 1px #46667e,0 3px 8px #0008;transition:.12s transform,.12s filter}
-button:hover{filter:brightness(1.25);transform:translateY(-1px)}
-button:active{transform:translateY(1px)}
-button:disabled{opacity:.38;cursor:not-allowed;transform:none}
-#moreArrows{border-color:#178bd0}#damage{border-color:#e44949}#speed{border-color:#2aa7ff}#range{border-color:#28c99a}#heal{border-color:#9a6cff}
-#fireArrow{border-color:#ff7428}#reinforce{border-color:#6e8b9e}#armor{border-color:#4fc2ff}#treeBtn{border-color:#7ddf45}#rain{border-color:#6c9cff}
-#tree{display:none;margin-top:9px;padding:12px;background:linear-gradient(110deg,#091522,#0d1c2b);border:1px solid #28506d;border-radius:3px;box-shadow:0 8px 24px #0008}
-#tree.open{display:block}
-#tree h3{margin:0 0 10px;font-size:14px;color:#dcecff;letter-spacing:.06em}
-.treeRow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.node{min-height:56px;text-align:left}
-#nodeVolley{border-color:#158cff}#nodePierce{border-color:#38d36c}#nodeInferno{border-color:#ff4545}#nodeFortress{border-color:#a95cff}
-#treeStatus{margin:8px 0 0;color:#6d859b}
-#hint{margin-top:9px;color:#61798f;font-size:11px;line-height:1.5;text-align:center}
-kbd{background:#0c1824;border:1px solid #35506a;border-radius:2px;padding:2px 5px;color:#dcecff}
-@media(max-width:900px){#controls{grid-template-columns:repeat(2,1fr)}.treeRow{grid-template-columns:repeat(2,1fr)}header{align-items:flex-start;flex-direction:column}}
-@media(max-width:520px){#controls{grid-template-columns:1fr}.treeRow{grid-template-columns:1fr}h1{font-size:19px}}
+html,body{margin:0;min-height:100%;background:#17191b;color:#e9e9e6;font-family:"Courier New",monospace}
+body{padding:12px;background:radial-gradient(circle at 50% 0,#3b3d3f 0,#252729 38%,#17191b 100%)}
+#wrap{width:min(1500px,100%);margin:auto}
+#topbar{height:58px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-bottom:1px solid #55565a;color:#f4f4ef}
+.resourceBar,.season{display:flex;gap:22px;font-size:13px}
+.resourceBar{padding-left:8px}.season{justify-content:flex-end;padding-right:8px}
+.resourceBar span:first-child{color:#eee}.resourceBar span:last-child{color:#f0ad26}
+.season b{color:#ffbd31}.season span{color:#eee}.modes{display:flex;gap:14px;font-size:12px;letter-spacing:.04em}.modes i{font-style:normal;color:#777}
+#mainLayout{display:grid;grid-template-columns:245px minmax(500px,1fr) 365px;gap:10px;margin-top:10px;align-items:start}
+.panel{background:linear-gradient(145deg,#303234,#202224);border:1px solid #4c4e50;box-shadow:inset 0 0 0 1px #171819,0 5px 18px #0008}
+.panelTitle{font-size:21px;font-weight:900;text-align:center;letter-spacing:.03em;color:#e8e8e3;padding:16px 8px 8px;text-shadow:2px 2px #111}
+.panelTitle.small{font-size:16px;text-align:left;padding:10px 12px 8px;border-bottom:1px solid #4b4c4e}
+.controlPanel{min-height:690px;position:relative;overflow:hidden}
+.controlSub{font-size:11px;font-weight:900;text-align:center;line-height:1.35;margin-top:20px}.controlSub em{font-style:normal;color:#36a9ff}
+.hold{font-size:11px;font-weight:900;line-height:1.05;transform:rotate(-6deg);margin:30px 0 0 45px}
+.armArt{height:205px;position:relative;margin-top:18px}.arm{position:absolute;width:190px;height:38px;left:-78px;top:85px;background:#e0e1e0;border-radius:20px;transform:rotate(-30deg);box-shadow:inset -12px 0 #bbb}.hand{position:absolute;width:29px;height:29px;border-radius:50%;left:62px;top:66px;background:#f2f2ef}.aimDots{position:absolute;left:82px;top:80px;width:120px;height:2px;background:repeating-linear-gradient(90deg,#eee 0 4px,transparent 4px 12px);transform:rotate(12deg)}
+.controlHint{text-align:center;font-size:10px;line-height:1.6;color:#bbb}.controlHint span{color:#58b7ff}
+.miniStats{position:absolute;bottom:18px;left:18px;right:18px;border-top:1px solid #555;padding-top:12px;display:grid;grid-template-columns:repeat(3,1fr);text-align:center;font-size:12px}.miniStats span{display:block;margin-bottom:4px}.miniStats b{font-size:14px}
+.centerArea{min-width:0}.gameFrame{border:1px solid #4d4e50;background:#111416;padding:3px;box-shadow:0 8px 28px #0009}
+canvas{display:block;width:100%;height:auto;aspect-ratio:16/10;background:#111820;cursor:crosshair}
+.bottomStatus{display:flex;justify-content:space-between;gap:8px;margin-top:8px;background:#202224;border:1px solid #505154;padding:12px 16px;font-size:11px}.bottomStatus>div{display:flex;gap:18px}.bottomStatus b:first-child{color:#f4ba2d}.bottomStatus strong{color:#fff}
+.rightColumn{display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 95px);overflow:auto;padding-right:2px}
+.statGrid{padding:8px}.statRow{width:100%;display:grid;grid-template-columns:30px 60px 1fr;align-items:center;gap:5px;border:0;border-bottom:1px solid #414346;background:#292b2d;color:#eee;text-align:left;padding:5px;box-shadow:none;border-radius:0}.statRow:hover{background:#36383a;transform:none}.statRow span{font-size:17px}.statRow b{background:#eee;color:#333;padding:5px;text-align:center}.statRow em{font-style:normal;font-size:10px;color:#ff5d5d}.statRow .red{color:#ff5656}.statRow .blue{color:#4aaaff}.statRow .green{color:#5cda9c}
+.upgradeCard{width:100%;display:flex;gap:12px;align-items:center;text-align:left;border:0;border-bottom:1px solid #454749;border-radius:0;background:#292b2d;box-shadow:none;padding:10px 12px}.upgradeCard:hover{background:#37393b;transform:none}.bigIcon{font-size:35px;color:#ddd}.upgradeCard b,.upgradeCard small,.upgradeCard strong{display:block}.upgradeCard b{font-size:11px}.upgradeCard small{font-size:9px;color:#aaa;margin:4px 0}.upgradeCard strong{font-size:10px;color:#f0b328}.upgradeCard i{font-style:normal}
+.ability{width:100%;display:flex;gap:10px;align-items:center;text-align:left;border:0;border-bottom:1px solid #454749;border-radius:0;background:#292b2d;box-shadow:none;padding:9px}.ability:hover{transform:none;background:#36383a}.ability>span{font-size:29px}.ability b,.ability small,.ability strong{display:block}.ability b{font-size:11px}.ability small{font-size:9px;color:#bbb}.ability strong{font-size:10px;color:#f1b52d;margin-top:3px}.ability.fire{border-left:3px solid #ff4242}.ability.rain{border-left:3px solid #f0b62f}
+.enemyList{padding:6px}.enemyList>div{display:grid;grid-template-columns:42px 1fr;grid-template-rows:auto auto;align-items:center;gap:1px 8px;padding:6px;border:1px solid #46484a;margin:3px;background:#292b2d}.enemyIcon{grid-row:1/3;width:34px;height:34px;display:grid;place-items:center;border:1px solid #566;color:#61dd76;font-size:21px}.enemyIcon.raider{color:#ddd}.enemyIcon.brute{color:#e99a37}.enemyIcon.bomber{color:#ff4444}.enemyIcon.tank{color:#a45dff}.enemyList b{font-size:11px}.enemyList small{font-size:9px;color:#aaa}
+.treeGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px}.node{min-height:82px;border:1px solid #438fe5;background:#25282a;text-align:left;box-shadow:none;border-radius:2px;display:grid;grid-template-columns:30px 1fr;gap:3px}.node:hover{transform:none}.node b,.node small{display:block}.node b{font-size:9px;color:#4cb4ff}.node small{font-size:8px;color:#bbb}.node:nth-child(2){border-color:#55d66d}.node:nth-child(2) b{color:#63e77b}.node:nth-child(3){border-color:#f24b56}.node:nth-child(3) b{color:#ff5a61}.node:nth-child(4){border-color:#a866ff}.node:nth-child(4) b{color:#b57cff}.locked{border-top:1px solid #4b4c4e;padding:8px;text-align:center;color:#aaa;font-size:9px}
+.otherRow{display:flex;align-items:center;gap:10px;margin:4px 8px;padding:7px;background:#2b2d2f;border:1px solid #454749;font-size:10px}.otherRow span{margin-left:auto;color:#ffb92d}
+.footerRow{display:flex;justify-content:center;gap:14px;align-items:center;margin-top:8px}.footerRow>div{border:1px solid #35b86b;background:#14271d;padding:8px 18px;color:#55df88;font-size:10px}.footerRow button{border:1px solid #555;background:#2c2e30;color:#fff;padding:8px 25px}
+#tree{display:none}#hint{text-align:center;color:#777;font-size:10px;margin-top:8px}kbd{background:#292b2d;border:1px solid #555;padding:2px 4px}
+@media(max-width:1100px){#mainLayout{grid-template-columns:190px minmax(420px,1fr) 310px}.panelTitle{font-size:16px}.rightColumn{max-height:none}}
+@media(max-width:800px){#mainLayout{grid-template-columns:1fr}.controlPanel{min-height:240px}.rightColumn{max-height:none}.armArt{display:none}.miniStats{position:static;margin:20px}.bottomStatus{flex-wrap:wrap}.topbar{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div id="wrap">
-<header>
-  <div><h1>🏹 ARROW RAMPAGE</h1><p>Hold the tower. Upgrade your archer. Survive the waves.</p></div>
-  <div id="stats">
-    <span class="badge">❤️ <b id="hp">100</b></span>
-    <span class="badge">💰 <b id="coins">0</b></span>
-    <span class="badge">🌊 Wave <b id="wave">1</b></span>
-    <span class="badge">🎯 Defeated <b id="kills">0</b></span>
+  <header id="topbar">
+    <div class="resourceBar">
+      <span>☠ <b id="killsTop">0</b></span>
+      <span>▣ <b id="coinsTop">+0</b></span>
+    </div>
+    <div class="modes"><b>1 PLAYER</b><i>|</i><b>PVP</b><i>|</i><b>2 PLAYERS</b></div>
+    <div class="season"><b>SEASON 5</b><span>SCORE <strong id="scoreTop">0</strong>/171</span></div>
+  </header>
+
+  <main id="mainLayout">
+    <aside class="panel controlPanel">
+      <div class="panelTitle">CONTROL AREA</div>
+      <div class="controlSub">SHOOTING<br>REQUIRES <em>STAMINA</em></div>
+      <div class="hold">HOLD AND<br>RELEASE</div>
+      <div class="armArt">
+        <div class="arm"></div><div class="hand"></div>
+        <div class="aimDots"></div>
+      </div>
+      <div class="controlHint"><b>Mouse</b> AIM<br><span>LEFT CLICK</span> SHOOT</div>
+      <div class="miniStats">
+        <div><span>❤️</span><b id="sideHp">100</b></div>
+        <div><span>💰</span><b id="sideCoins">0</b></div>
+        <div><span>🎯</span><b id="sideKills">0</b></div>
+      </div>
+    </aside>
+
+    <section class="centerArea">
+      <div class="gameFrame">
+        <canvas id="game" width="960" height="600" aria-label="2D tower archery game"></canvas>
+      </div>
+      <div class="bottomStatus">
+        <div><b>SEASON 5</b><span>SCORE <strong id="scoreBottom">0</strong>/171</span></div>
+        <div><b>WAVE <strong id="waveBottom">1</strong></b><span>ENEMIES: <strong id="enemyBottom">0</strong></span><span>NEXT WAVE <strong id="nextWaveBottom">READY</strong></span></div>
+      </div>
+    </section>
+
+    <aside class="rightColumn">
+      <section class="panel statPanel">
+        <div class="panelTitle small">PLAYER STATS</div>
+        <div class="statGrid">
+          <button class="statRow" id="moreArrows"><span>➹</span><b id="costArrows">30</b><em>ARROW SLOTS +1</em></button>
+          <button class="statRow" id="damage"><span>✹</span><b id="costDamage">35</b><em class="red">DAMAGE +1</em></button>
+          <button class="statRow" id="speed"><span>ϟ</span><b id="costSpeed">40</b><em class="blue">ARROW SPEED +1</em></button>
+          <button class="statRow" id="range"><span>◎</span><b id="costRange">45</b><em class="green">RANGE +1</em></button>
+          <button class="statRow" id="heal"><span>♥</span><b id="costHeal">25</b><em>REPAIR +30</em></button>
+        </div>
+      </section>
+
+      <section class="panel upgradePanel">
+        <div class="panelTitle small">TOWER UPGRADES</div>
+        <button id="reinforce" class="upgradeCard"><span class="bigIcon">♜</span><div><b>REINFORCE TOWER</b><small>+25 MAX HP</small><strong>▣ <i id="costReinforce">60</i></strong></div></button>
+        <button id="armor" class="upgradeCard"><span class="bigIcon">⬟</span><div><b>TOWER ARMOR</b><small>REDUCES ENEMY DAMAGE</small><strong>▣ <i id="costArmor">90</i></strong></div></button>
+      </section>
+
+      <section class="panel abilityPanel">
+        <div class="panelTitle small">SPECIAL ABILITIES</div>
+        <button id="fireArrow" class="ability fire"><span>🔥</span><div><b>FIRE ARROWS</b><small>BURN ENEMIES</small><strong id="costFire">120</strong></div></button>
+        <button id="rain" class="ability rain"><span>☄</span><div><b>RAIN OF ARROWS</b><small>AREA DAMAGE</small><strong id="rainStatus">300</strong></div></button>
+      </section>
+
+      <section class="panel enemyPanel">
+        <div class="panelTitle small">ENEMY TYPES</div>
+        <div class="enemyList">
+          <div><span class="enemyIcon runner">♟</span><b>RUNNER</b><small>FAST • LOW HP</small></div>
+          <div><span class="enemyIcon raider">♟</span><b>RAIDER</b><small>NORMAL</small></div>
+          <div><span class="enemyIcon brute">♟</span><b>BRUTE</b><small>HIGH HP</small></div>
+          <div><span class="enemyIcon bomber">☢</span><b>BOMBER</b><small>EXPLOSIVE</small></div>
+          <div><span class="enemyIcon tank">▣</span><b>TANK</b><small>VERY HIGH HP</small></div>
+        </div>
+      </section>
+
+      <section class="panel treePanel">
+        <div class="panelTitle small">🌳 UPGRADE TREE</div>
+        <div class="treeGrid">
+          <button class="node" id="nodeVolley">🏹<b>VOLLEY MASTER</b><small>MORE ARROWS<br>180 💰</small></button>
+          <button class="node" id="nodePierce">🎯<b>PIERCING ARROWS</b><small>PASS THROUGH<br>220 💰</small></button>
+          <button class="node" id="nodeInferno">🔥<b>INFERNO TIPS</b><small>BURN LONGER<br>200 💰</small></button>
+          <button class="node" id="nodeFortress">🏰<b>FORTRESS CORE</b><small>+75 HP + ARMOR<br>250 💰</small></button>
+        </div>
+        <div class="locked">🔒 REQUIRES PREVIOUS UPGRADE</div>
+      </section>
+
+      <section class="panel otherPanel">
+        <div class="panelTitle small">OTHER</div>
+        <div class="otherRow">🏹 <b>ARROWS</b><span>➤</span></div>
+        <div class="otherRow">🔥 <b>FIRE ARROWS</b><span>➤</span></div>
+        <div class="otherRow">☁ <b>RAIN OF ARROWS</b><span>➤</span></div>
+        <div class="otherRow">⬆ <b>UPGRADES</b><span>➤</span></div>
+      </section>
+    </aside>
+  </main>
+
+  <div class="footerRow">
+    <div id="testBadge">🧪 CHEAT CODE: <b>TESTMODE</b></div>
+    <button id="treeBtn">⚙ LEADERS</button>
   </div>
-</header>
 
-<canvas id="game" width="960" height="600" aria-label="2D tower archery game"></canvas>
-
-<div id="controls">
-  <button id="moreArrows">🏹 More arrows <b id="costArrows">30</b>💰</button>
-  <button id="damage">💥 Damage <b id="costDamage">35</b>💰</button>
-  <button id="speed">⚡ Arrow speed <b id="costSpeed">40</b>💰</button>
-  <button id="range">🎯 Range <b id="costRange">45</b>💰</button>
-  <button id="heal">❤️ Repair <b id="costHeal">25</b>💰</button>
-  <button id="fireArrow">🔥 Unlock Fire Arrow <b id="costFire">120</b>💰</button>
-  <button id="reinforce">🧱 Reinforce Tower <b id="costReinforce">60</b>💰</button>
-  <button id="armor">🛡️ Tower Armor <b id="costArmor">90</b>💰</button>
-  <button id="treeBtn">🌳 Upgrade Tree</button>
-  <button id="rain">☄️ Rain of Arrows <b id="rainStatus">READY</b></button>
+  <div id="tree"><p id="treeStatus">Choose a branch.</p></div>
+  <div id="hint"><kbd>Mouse</kbd> aim · <kbd>Left click</kbd> shoot · <kbd>WASD</kbd>/<kbd>Arrow keys</kbd> move · <kbd>P</kbd> pause · <kbd>R</kbd> restart</div>
 </div>
-<div id="tree">
-  <h3>🌳 Upgrade Tree — unlock powerful branches</h3>
-  <div class="treeRow">
-    <button class="node" id="nodeVolley">🏹 Volley Master <b>180</b>💰</button>
-    <button class="node" id="nodePierce">🎯 Piercing Arrows <b>220</b>💰</button>
-    <button class="node" id="nodeInferno">🔥 Inferno Tips <b>200</b>💰</button>
-    <button class="node" id="nodeFortress">🏰 Fortress Core <b>250</b>💰</button>
-  </div>
-  <p id="treeStatus">Choose a branch. Each node can be unlocked once.</p>
-</div>
-<div id="hint">
-  <kbd>Mouse</kbd> aim · <kbd>Left click</kbd> shoot · <kbd>WASD</kbd>/<kbd>Arrow keys</kbd> move on the platform ·
-  enemies climb toward your tower · buy upgrades between waves
-</div>
-</div>
-
 <script>
 (() => {
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
@@ -483,17 +546,26 @@ function drawBackground(){
   $('hp').textContent=Math.max(0,Math.ceil(player.hp))+'/'+towerMaxHp;
   $('costReinforce').textContent=up.reinforce.cost;
   $('costArmor').textContent=up.armor.cost;
+  $('killsTop').textContent=kills;
+  $('coinsTop').textContent='+'+Math.floor(coins);
+  $('scoreTop').textContent=kills;
+  $('scoreBottom').textContent=kills;
+  $('sideHp').textContent=Math.ceil(player.hp);
+  $('sideCoins').textContent=Math.floor(coins);
+  $('sideKills').textContent=kills;
+  $('waveBottom').textContent=wave;
+  $('enemyBottom').textContent=enemies.length;
+  $('nextWaveBottom').textContent=waveActive?'ACTIVE':'READY';
   $('nodeVolley').disabled=tree.volley;
   $('nodePierce').disabled=!tree.volley||tree.pierce;
   $('nodeInferno').disabled=!fireUnlocked||tree.inferno;
   $('nodeFortress').disabled=!tree.volley||tree.fortress;
   const rb=$('rain');
-  if(!rainUnlocked) rb.innerHTML='☄️ Unlock Rain of Arrows <b>300</b>💰';
-  else rb.innerHTML='☄️ Rain of Arrows <b id="rainStatus">'+(rainCooldown>0?Math.ceil(rainCooldown/60)+'s':'READY')+'</b>';
+  if(!rainUnlocked) rb.querySelector('strong').textContent='300';
+  else rb.querySelector('strong').textContent=rainCooldown>0?Math.ceil(rainCooldown/60)+'s':'READY';
   const fb=$('fireArrow');
-  if(fireUnlocked){fb.innerHTML='🔥 Fire Arrow: '+(fireEnabled?'ON':'OFF');fb.title='Toggle fire arrows'}
-  else fb.innerHTML='🔥 Unlock Fire Arrow <b id="costFire">120</b>💰';
-}
+  if(fireUnlocked){fb.querySelector('b').textContent='FIRE ARROWS: '+(fireEnabled?'ON':'OFF');fb.querySelector('strong').textContent='TOGGLE'}
+  else {fb.querySelector('b').textContent='FIRE ARROWS';fb.querySelector('strong').textContent='120'}
 function buy(type){
   if(type==='heal'){
     if(coins>=up.heal.cost && player.hp<towerMaxHp){
