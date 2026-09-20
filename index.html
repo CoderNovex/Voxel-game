@@ -158,10 +158,13 @@ function update(){
     if(spawnLeft===0 && enemies.length===0){
       waveActive=false;wave++;coins+=12+wave*2;
     }
-  } else if(enemies.length===0 && waveTimer<=0){
-    waveTimer=100;
-  } else if(!waveActive && enemies.length===0){
-    waveTimer--;
+  } else if(enemies.length===0){
+    if(waveTimer<=0){
+      waveTimer=100;
+    }else{
+      waveTimer--;
+      if(waveTimer===0) startWave();
+    }
   }
 
   arrows.forEach(a=>{a.x+=a.vx;a.y+=a.vy;a.life--});
