@@ -3,135 +3,330 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Signal Unknown — Alien Invasion</title>
+<title>ARROW RAMPAGE — Tower Archer</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#071016;color:#e9f6ff;font-family:system-ui,Segoe UI,sans-serif}
-body{display:grid;place-items:center;padding:18px}
-#wrap{width:min(100%,1000px)}
-header{display:flex;justify-content:space-between;gap:12px;align-items:end;margin-bottom:10px}
-h1{font-size:22px;margin:0;letter-spacing:.08em}p{margin:4px 0 0;color:#8ea7b8;font-size:13px}
-#stats{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-.badge{border:1px solid #254050;border-radius:8px;padding:6px 9px;background:#0c1921;font-size:12px}
-canvas{display:block;width:100%;height:auto;aspect-ratio:16/10;background:#0b1419;border:1px solid #284553;border-radius:12px;image-rendering:pixelated;box-shadow:0 12px 35px #0008}
-#hint{margin-top:9px;color:#9db2bf;font-size:12px;line-height:1.5}
-kbd{background:#10232d;border:1px solid #34515f;border-radius:5px;padding:2px 5px;color:#fff}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#11151b;color:#f4f1e8;font-family:system-ui,Segoe UI,sans-serif}
+body{display:grid;place-items:center;padding:14px}
+#wrap{width:min(100%,1040px)}
+header{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:8px}
+h1{margin:0;font-size:23px;letter-spacing:.07em}
+p{margin:3px 0 0;color:#9da7b0;font-size:12px}
+#stats{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.badge{background:#1b2028;border:1px solid #343d48;border-radius:8px;padding:6px 9px;font-size:12px}
+canvas{display:block;width:100%;height:auto;aspect-ratio:16/10;background:#20262e;border:1px solid #414a55;border-radius:12px;box-shadow:0 12px 35px #0009;cursor:crosshair}
+#controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:9px}
+button{border:1px solid #46515e;background:#202833;color:#f4f1e8;border-radius:7px;padding:7px 10px;cursor:pointer}
+button:hover{background:#2a3440}
+button:disabled{opacity:.45;cursor:not-allowed}
+#hint{margin-top:8px;color:#9da7b0;font-size:12px;line-height:1.45}
+kbd{background:#202833;border:1px solid #46515e;border-radius:4px;padding:2px 5px;color:#fff}
 </style>
 </head>
 <body>
 <div id="wrap">
 <header>
-  <div><h1>📡 SIGNAL: UNKNOWN</h1><p>A tiny 2D alien-invasion prototype</p></div>
-  <div id="stats"><span class="badge">HP <b id="hp">100</b></span><span class="badge">SIGNALS <b id="signals">0/3</b></span><span class="badge">ALIENS <b id="aliens">0</b></span></div>
+  <div><h1>🏹 ARROW RAMPAGE</h1><p>Hold the tower. Upgrade your archer. Survive the waves.</p></div>
+  <div id="stats">
+    <span class="badge">❤️ <b id="hp">100</b></span>
+    <span class="badge">💰 <b id="coins">0</b></span>
+    <span class="badge">🌊 Wave <b id="wave">1</b></span>
+    <span class="badge">🎯 Defeated <b id="kills">0</b></span>
+  </div>
 </header>
-<canvas id="game" width="960" height="600" aria-label="2D alien invasion game"></canvas>
-<div id="hint"><kbd>WASD</kbd>/<kbd>Arrow keys</kbd> move · <kbd>Mouse</kbd> aim · <kbd>Click</kbd> fire · Reach all 3 signal beacons · Avoid the aliens</div>
+
+<canvas id="game" width="960" height="600" aria-label="2D tower archery game"></canvas>
+
+<div id="controls">
+  <button id="moreArrows">🏹 More arrows <b id="costArrows">30</b>💰</button>
+  <button id="damage">💥 Damage <b id="costDamage">35</b>💰</button>
+  <button id="speed">⚡ Arrow speed <b id="costSpeed">40</b>💰</button>
+  <button id="range">🎯 Range <b id="costRange">45</b>💰</button>
+  <button id="heal">❤️ Repair <b id="costHeal">25</b>💰</button>
 </div>
+<div id="hint">
+  <kbd>Mouse</kbd> aim · <kbd>Left click</kbd> shoot · <kbd>WASD</kbd>/<kbd>Arrow keys</kbd> move on the platform ·
+  enemies climb toward your tower · buy upgrades between waves
+</div>
+</div>
+
 <script>
 (() => {
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 const W=canvas.width,H=canvas.height;
-const tileImgs=[];
-for(let i=0;i<10;i++){const im=new Image();im.src='assets/tile_000'+i+'.png';tileImgs.push(im)}
-const keys=new Set(), mouse={x:W/2,y:H/2,down:false};
-addEventListener('keydown',e=>{keys.add(e.key.toLowerCase()); if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase()))e.preventDefault()});
+const keys=new Set(),mouse={x:W/2,y:H/2,down:false};
+const player={x:W/2,y:H-125,hp:100,cool:0};
+const tower={x:W/2,y:H-105,w:330,h:100};
+let arrows=[],enemies=[],particles=[];
+let coins=0,kills=0,wave=1,waveActive=false,waveTimer=0,spawnLeft=0;
+let gameOver=false,paused=false;
+
+const up={
+  arrows:{level:1,cost:30},
+  damage:{level:1,cost:35},
+  speed:{level:1,cost:40},
+  range:{level:1,cost:45},
+  heal:{cost:25}
+};
+
+function $(id){return document.getElementById(id)}
+function rnd(a,b){return a+Math.random()*(b-a)}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function d(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+
+addEventListener('keydown',e=>{
+  keys.add(e.key.toLowerCase());
+  if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase()))e.preventDefault();
+  if(e.key.toLowerCase()==='r' && gameOver) reset();
+  if(e.key.toLowerCase()==='p') paused=!paused;
+});
 addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
-canvas.addEventListener('pointermove',e=>{const r=canvas.getBoundingClientRect();mouse.x=(e.clientX-r.left)*W/r.width;mouse.y=(e.clientY-r.top)*H/r.height});
+canvas.addEventListener('pointermove',e=>{
+  const r=canvas.getBoundingClientRect();
+  mouse.x=(e.clientX-r.left)*W/r.width;
+  mouse.y=(e.clientY-r.top)*H/r.height;
+});
 canvas.addEventListener('pointerdown',()=>mouse.down=true);
 addEventListener('pointerup',()=>mouse.down=false);
 
-const player={x:W/2,y:H/2,r:12,hp:100,cool:0};
-const signals=[{x:135,y:115,got:false},{x:815,y:145,got:false},{x:760,y:490,got:false}];
-let bullets=[], enemies=[], particles=[], score=0, gameOver=false, won=false, spawnTimer=0;
-
-function rnd(a,b){return a+Math.random()*(b-a)}
-function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
-function spawnAlien(){
-  const side=Math.floor(Math.random()*4), p=side===0?{x:-20,y:rnd(20,H-20)}:side===1?{x:W+20,y:rnd(20,H-20)}:side===2?{x:rnd(20,W-20),y:-20}:{x:rnd(20,W-20),y:H+20};
-  enemies.push({x:p.x,y:p.y,r:12,speed:rnd(0.65,1.05),hp:2});
+function enemyType(){
+  const roll=Math.random();
+  if(wave>=5 && roll<.18) return {kind:'brute',r:19,hp:9+wave,speed:.35+wave*.008,coins:8};
+  if(wave>=3 && roll<.35) return {kind:'runner',r:10,hp:2+Math.floor(wave/3),speed:.95+wave*.012,coins:4};
+  return {kind:'raider',r:13,hp:3+Math.floor(wave/2),speed:.55+wave*.01,coins:3};
 }
-function burst(x,y,n=8){
-  for(let i=0;i<n;i++)particles.push({x,y,vx:rnd(-2,2),vy:rnd(-2,2),life:rnd(15,30)});
+function spawnEnemy(){
+  const e=enemyType();
+  enemies.push({
+    x:rnd(55,W-55),y:rnd(55,210),r:e.r,hp:e.hp,maxHp:e.hp,
+    speed:e.speed,kind:e.kind,coins:e.coins,
+    targetY:tower.y+10
+  });
+}
+function startWave(){
+  if(waveActive||gameOver)return;
+  waveActive=true;
+  spawnLeft=5+wave*3;
+  waveTimer=0;
 }
 function fire(){
-  if(player.cool>0||gameOver||won)return;
+  if(gameOver||paused||player.cool>0)return;
   const a=Math.atan2(mouse.y-player.y,mouse.x-player.x);
-  bullets.push({x:player.x+Math.cos(a)*16,y:player.y+Math.sin(a)*16,vx:Math.cos(a)*7,vy:Math.sin(a)*7,life:80});
-  player.cool=12;
+  const count=up.arrows.level;
+  const spread=count===1?0:.10;
+  for(let i=0;i<count;i++){
+    const offset=(i-(count-1)/2)*spread;
+    const ang=a+offset;
+    arrows.push({
+      x:player.x+Math.cos(ang)*25,y:player.y+Math.sin(ang)*25,
+      vx:Math.cos(ang)*(6+up.speed.level*.8),
+      vy:Math.sin(ang)*(6+up.speed.level*.8),
+      life:up.range.level*48,damage:up.damage.level
+    });
+  }
+  player.cool=Math.max(4,14-up.speed.level*1.2);
 }
+function burst(x,y,n=7){
+  for(let i=0;i<n;i++)particles.push({x,y,vx:rnd(-2.4,2.4),vy:rnd(-2.4,2.4),life:rnd(12,26)});
+}
+
 function update(){
-  if(gameOver||won)return;
+  if(gameOver||paused)return;
+
   let dx=0,dy=0;
-  if(keys.has('w')||keys.has('arrowup'))dy--; if(keys.has('s')||keys.has('arrowdown'))dy++;
-  if(keys.has('a')||keys.has('arrowleft'))dx--; if(keys.has('d')||keys.has('arrowright'))dx++;
-  if(dx||dy){const l=Math.hypot(dx,dy);player.x+=dx/l*3;player.y+=dy/l*3}
-  player.x=Math.max(18,Math.min(W-18,player.x));player.y=Math.max(18,Math.min(H-18,player.y));
-  if(mouse.down)fire(); if(player.cool>0)player.cool--;
-  spawnTimer--; if(spawnTimer<=0){spawnAlien();spawnTimer=Math.max(28,80-score*2)}
-  bullets.forEach(b=>{b.x+=b.vx;b.y+=b.vy;b.life--});
-  bullets=bullets.filter(b=>b.life>0&&b.x>-20&&b.x<W+20&&b.y>-20&&b.y<H+20);
+  if(keys.has('w')||keys.has('arrowup'))dy--;
+  if(keys.has('s')||keys.has('arrowdown'))dy++;
+  if(keys.has('a')||keys.has('arrowleft'))dx--;
+  if(keys.has('d')||keys.has('arrowright'))dx++;
+  if(dx||dy){
+    const l=Math.hypot(dx,dy);
+    player.x+=dx/l*3.1; player.y+=dy/l*3.1;
+  }
+  player.x=clamp(player.x,tower.x-tower.w/2+28,tower.x+tower.w/2-28);
+  player.y=clamp(player.y,tower.y-18,tower.y+tower.h-24);
+
+  if(mouse.down)fire();
+  if(player.cool>0)player.cool--;
+
+  if(waveActive){
+    waveTimer--;
+    if(spawnLeft>0 && waveTimer<=0){
+      spawnEnemy();spawnLeft--;waveTimer=Math.max(10,38-wave*1.4);
+    }
+    if(spawnLeft===0 && enemies.length===0){
+      waveActive=false;wave++;coins+=12+wave*2;
+    }
+  } else if(enemies.length===0 && waveTimer<=0){
+    waveTimer=100;
+  } else if(!waveActive && enemies.length===0){
+    waveTimer--;
+  }
+
+  arrows.forEach(a=>{a.x+=a.vx;a.y+=a.vy;a.life--});
+  arrows=arrows.filter(a=>a.life>0&&a.x>-30&&a.x<W+30&&a.y>-30&&a.y<H+30);
+
   enemies.forEach(e=>{
-    const a=Math.atan2(player.y-e.y,player.x-e.x);e.x+=Math.cos(a)*e.speed;e.y+=Math.sin(a)*e.speed;
-    if(dist(e,player)<e.r+player.r){player.hp-=0.35;burst(player.x,player.y,1)}
+    const ang=Math.atan2((tower.y+4)-e.y,tower.x-e.x);
+    e.x+=Math.cos(ang)*e.speed;
+    e.y+=Math.sin(ang)*e.speed;
+
+    if(e.y>tower.y-5 && Math.abs(e.x-tower.x)<tower.w/2){
+      player.hp-=e.kind==='brute'?.24:.12;
+      e.y=tower.y+8;
+    }
   });
-  for(const b of bullets){
+
+  for(const a of arrows){
+    if(a.life<=0)continue;
     for(const e of enemies){
-      if(e.hp>0&&Math.hypot(b.x-e.x,b.y-e.y)<e.r+5){e.hp--;b.life=0;burst(e.x,e.y,4);if(e.hp<=0)score++}
+      if(e.hp>0 && Math.hypot(a.x-e.x,a.y-e.y)<e.r+7){
+        e.hp-=a.damage;
+        a.life=0;burst(e.x,e.y,4);
+        if(e.hp<=0){
+          coins+=e.coins;kills++;burst(e.x,e.y,8);
+        }
+        break;
+      }
     }
   }
   enemies=enemies.filter(e=>e.hp>0);
-  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--});particles=particles.filter(p=>p.life>0);
-  signals.forEach(s=>{if(!s.got&&dist(s,player)<28){s.got=true;score+=5;burst(s.x,s.y,18)}});
-  if(signals.every(s=>s.got))won=true;
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--});
+  particles=particles.filter(p=>p.life>0);
+
   if(player.hp<=0)gameOver=true;
-  document.getElementById('hp').textContent=Math.max(0,Math.ceil(player.hp));
-  document.getElementById('signals').textContent=signals.filter(s=>s.got).length+'/3';
-  document.getElementById('aliens').textContent=enemies.length;
+  updateUI();
 }
-function drawTile(x,y,i,size=32){
-  const im=tileImgs[i%tileImgs.length];
-  if(im.complete&&im.naturalWidth){ctx.drawImage(im,x,y,size,size)}
-  else {ctx.fillStyle=i%2?'#182a22':'#20332a';ctx.fillRect(x,y,size,size)}
+
+function drawBackground(){
+  ctx.fillStyle='#202831';ctx.fillRect(0,0,W,H);
+  // distant ground
+  ctx.fillStyle='#29342f';ctx.fillRect(0,0,W,H);
+  for(let i=0;i<22;i++){
+    const x=(i*83)%W,y=35+(i*57)%190;
+    ctx.fillStyle=i%3?'#334139':'#3a4940';
+    ctx.fillRect(x,y,45+(i%4)*15,25+(i%3)*14);
+    ctx.fillStyle='#59695d';ctx.fillRect(x+7,y+7,9,7);
+  }
+  // roads / lanes
+  ctx.fillStyle='#252b31';ctx.fillRect(0,215,W,130);
+  ctx.fillStyle='#3b4248';
+  for(let x=-20;x<W;x+=80)ctx.fillRect(x,276,40,5);
+
+  // tower
+  ctx.fillStyle='#151b22';ctx.fillRect(tower.x-tower.w/2,tower.y,tower.w,tower.h);
+  ctx.fillStyle='#303944';ctx.fillRect(tower.x-tower.w/2,tower.y,tower.w,15);
+  ctx.fillStyle='#4b5662';ctx.fillRect(tower.x-tower.w/2+8,tower.y+15,tower.w-16,8);
+  for(let x=tower.x-tower.w/2+15;x<tower.x+tower.w/2-10;x+=42){
+    ctx.fillStyle='#222a33';ctx.fillRect(x,tower.y+35,26,35);
+  }
+  ctx.fillStyle='#8b6d45';ctx.fillRect(tower.x-32,tower.y-30,64,32);
+  ctx.fillStyle='#b58a52';ctx.fillRect(tower.x-25,tower.y-24,50,8);
+}
+function drawCharacter(){
+  const ang=Math.atan2(mouse.y-player.y,mouse.x-player.x);
+  ctx.save();ctx.translate(player.x,player.y);
+  // shadow
+  ctx.fillStyle='#0006';ctx.beginPath();ctx.ellipse(0,18,22,7,0,0,Math.PI*2);ctx.fill();
+  // legs/body/helmet
+  ctx.fillStyle='#d7dbe0';ctx.fillRect(-13,2,10,20);ctx.fillRect(3,2,10,20);
+  ctx.fillStyle='#65717d';ctx.fillRect(-16,-15,32,23);
+  ctx.fillStyle='#c9ced3';ctx.beginPath();ctx.arc(0,-25,13,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#303943';ctx.fillRect(-10,-29,20,7);
+  // bow arm
+  ctx.rotate(ang);
+  ctx.strokeStyle='#d7a447';ctx.lineWidth=3;
+  ctx.beginPath();ctx.arc(13,0,24,-.95,.95);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(13,-20);ctx.lineTo(13,20);ctx.stroke();
+  ctx.strokeStyle='#e8e2cf';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(-1,0);ctx.lineTo(37,0);ctx.stroke();
+  ctx.restore();
+}
+function drawArrow(a){
+  const ang=Math.atan2(a.vy,a.vx);
+  ctx.save();ctx.translate(a.x,a.y);ctx.rotate(ang);
+  ctx.strokeStyle='#eee9dc';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-13,0);ctx.lineTo(9,0);ctx.stroke();
+  ctx.fillStyle='#d9a441';ctx.beginPath();ctx.moveTo(11,0);ctx.lineTo(2,-5);ctx.lineTo(4,0);ctx.lineTo(2,5);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#7d5132';ctx.beginPath();ctx.moveTo(-12,0);ctx.lineTo(-18,-5);ctx.lineTo(-16,0);ctx.lineTo(-18,5);ctx.closePath();ctx.fill();
+  ctx.restore();
+}
+function drawEnemy(e){
+  ctx.save();ctx.translate(e.x,e.y);
+  ctx.fillStyle='#0005';ctx.beginPath();ctx.ellipse(0,e.r+7,e.r,5,0,0,Math.PI*2);ctx.fill();
+  const body=e.kind==='brute'?'#8c5b3e':e.kind==='runner'?'#b58a42':'#596875';
+  ctx.fillStyle=body;ctx.fillRect(-e.r*.72,-e.r*.55,e.r*1.44,e.r*1.5);
+  ctx.fillStyle='#c6a37a';ctx.beginPath();ctx.arc(0,-e.r*.85,e.r*.62,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#20262d';ctx.fillRect(-e.r*.52,-e.r*1.02,e.r*1.04,5);
+  // health bar
+  ctx.fillStyle='#171b20';ctx.fillRect(-e.r,-e.r*1.7,e.r*2,4);
+  ctx.fillStyle='#d36b58';ctx.fillRect(-e.r,-e.r*1.7,e.r*2*(e.hp/e.maxHp),4);
+  ctx.restore();
 }
 function draw(){
-  ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='#0a1615';ctx.fillRect(0,0,W,H);
-  for(let y=0;y<H;y+=32)for(let x=0;x<W;x+=32)drawTile(x,y,(x/32+y/32)%10,32);
-  ctx.fillStyle='rgba(5,10,14,.28)';ctx.fillRect(0,0,W,H);
-  // city blocks
-  for(let i=0;i<7;i++){let x=55+i*125,y=255+(i%2)*38;ctx.fillStyle='#17262e';ctx.fillRect(x,y,92,55);ctx.strokeStyle='#304b57';ctx.strokeRect(x,y,92,55)}
-  // signals
-  signals.forEach(s=>{
-    ctx.beginPath();ctx.arc(s.x,s.y,26,0,Math.PI*2);ctx.strokeStyle=s.got?'#78909c':'#67e8f9';ctx.globalAlpha=.25+.15*Math.sin(performance.now()/150);ctx.stroke();ctx.globalAlpha=1;
-    ctx.fillStyle=s.got?'#78909c':'#67e8f9';ctx.fillRect(s.x-5,s.y-5,10,10);
-    ctx.fillStyle='#c7f9ff';ctx.font='11px monospace';ctx.fillText(s.got?'SYNCED':'SIGNAL',s.x-22,s.y-34);
-  });
-  // player
-  const pa=Math.atan2(mouse.y-player.y,mouse.x-player.x);
-  ctx.save();ctx.translate(player.x,player.y);ctx.rotate(pa);ctx.fillStyle='#e8f1f5';ctx.beginPath();ctx.arc(0,0,12,0,Math.PI*2);ctx.fill();ctx.fillStyle='#4fd1c5';ctx.fillRect(7,-4,12,8);ctx.restore();
-  // aliens
-  enemies.forEach(e=>{
-    ctx.fillStyle='#9cff57';ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#071016';ctx.beginPath();ctx.arc(e.x-4,e.y-2,2.2,0,Math.PI*2);ctx.arc(e.x+4,e.y-2,2.2,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#9cff57';ctx.globalAlpha=.25;ctx.beginPath();ctx.arc(e.x,e.y,e.r+5,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1;
-  });
-  // bullets
-  ctx.fillStyle='#fff4a8';bullets.forEach(b=>{ctx.beginPath();ctx.arc(b.x,b.y,3,0,Math.PI*2);ctx.fill()});
-  particles.forEach(p=>{ctx.globalAlpha=p.life/30;ctx.fillStyle='#b8f7ff';ctx.fillRect(p.x,p.y,3,3)});ctx.globalAlpha=1;
-  if(gameOver||won){
-    ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(0,0,W,H);
-    ctx.textAlign='center';ctx.fillStyle='#fff';ctx.font='bold 36px system-ui';
-    ctx.fillText(won?'SIGNAL LOCKED':'SIGNAL LOST',W/2,H/2-18);
-    ctx.font='16px system-ui';ctx.fillStyle='#a9c1cc';
-    ctx.fillText(won?'You found all three transmission points.':'The aliens overwhelmed the area.',W/2,H/2+16);
-    ctx.fillText('Press R to restart',W/2,H/2+50);ctx.textAlign='left';
+  drawBackground();
+  enemies.forEach(drawEnemy);
+  arrows.forEach(drawArrow);
+  drawCharacter();
+  particles.forEach(p=>{ctx.globalAlpha=p.life/26;ctx.fillStyle='#f2d68a';ctx.fillRect(p.x,p.y,3,3)});ctx.globalAlpha=1;
+
+  ctx.fillStyle='#fff';ctx.font='bold 14px system-ui';
+  ctx.fillText(waveActive?'WAVE INCOMING':'TOWER SECURE',18,27);
+  if(!waveActive && enemies.length===0){
+    ctx.fillStyle='#d7c49b';ctx.font='12px system-ui';
+    ctx.fillText('Next wave begins automatically',18,47);
+  }
+  if(gameOver){
+    ctx.fillStyle='#000b';ctx.fillRect(0,0,W,H);
+    ctx.textAlign='center';ctx.fillStyle='#fff';ctx.font='bold 40px system-ui';
+    ctx.fillText('TOWER OVERRUN',W/2,H/2-22);
+    ctx.font='16px system-ui';ctx.fillStyle='#d5dce2';
+    ctx.fillText('You defeated '+kills+' enemies and earned '+coins+' coins.',W/2,H/2+16);
+    ctx.fillText('Press R to restart',W/2,H/2+50);
+    ctx.textAlign='left';
+  }
+  if(paused&&!gameOver){
+    ctx.fillStyle='#0009';ctx.fillRect(0,0,W,H);
+    ctx.textAlign='center';ctx.fillStyle='#fff';ctx.font='bold 32px system-ui';ctx.fillText('PAUSED',W/2,H/2);
+    ctx.font='14px system-ui';ctx.fillStyle='#ccd5dc';ctx.fillText('Press P to continue',W/2,H/2+30);ctx.textAlign='left';
   }
 }
-function reset(){
-  player.x=W/2;player.y=H/2;player.hp=100;bullets=[];enemies=[];particles=[];score=0;spawnTimer=10;gameOver=false;won=false;
-  signals.forEach(s=>s.got=false);
+function updateUI(){
+  $('hp').textContent=Math.max(0,Math.ceil(player.hp));
+  $('coins').textContent=Math.floor(coins);
+  $('wave').textContent=wave;
+  $('kills').textContent=kills;
+  $('costArrows').textContent=up.arrows.cost;
+  $('costDamage').textContent=up.damage.cost;
+  $('costSpeed').textContent=up.speed.cost;
+  $('costRange').textContent=up.range.cost;
+  $('costHeal').textContent=up.heal.cost;
 }
-addEventListener('keydown',e=>{if(e.key.toLowerCase()==='r'&&(gameOver||won))reset()});
-function loop(){update();draw();requestAnimationFrame(loop)} loop();
+function buy(type){
+  if(type==='heal'){
+    if(coins>=up.heal.cost && player.hp<100){
+      coins-=up.heal.cost;player.hp=Math.min(100,player.hp+30);up.heal.cost+=10;
+    }
+  }else{
+    const u=up[type];
+    if(coins>=u.cost){
+      coins-=u.cost;u.level++;u.cost=Math.floor(u.cost*1.55);
+    }
+  }
+  updateUI();
+}
+$('moreArrows').onclick=()=>buy('arrows');
+$('damage').onclick=()=>buy('damage');
+$('speed').onclick=()=>buy('speed');
+$('range').onclick=()=>buy('range');
+$('heal').onclick=()=>buy('heal');
+
+function reset(){
+  player.x=W/2;player.y=H-125;player.hp=100;arrows=[];enemies=[];particles=[];
+  coins=0;kills=0;wave=1;waveActive=false;waveTimer=0;spawnLeft=0;gameOver=false;paused=false;
+  up.arrows={level:1,cost:30};up.damage={level:1,cost:35};up.speed={level:1,cost:40};up.range={level:1,cost:45};up.heal={cost:25};
+  updateUI();startWave();
+}
+updateUI();startWave();
+function loop(){update();draw();requestAnimationFrame(loop)}loop();
 })();
 </script>
 </body>
