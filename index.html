@@ -99,8 +99,10 @@ addEventListener('pointerup',()=>mouse.down=false);
 
 function enemyType(){
   const roll=Math.random();
-  if(wave>=5 && roll<.18) return {kind:'brute',r:19,hp:9+wave,speed:.35+wave*.008,coins:8};
-  if(wave>=3 && roll<.35) return {kind:'runner',r:10,hp:2+Math.floor(wave/3),speed:.95+wave*.012,coins:4};
+  if(wave>=7 && roll<.12) return {kind:'tank',r:25,hp:24+wave*2,speed:.22+wave*.004,coins:14};
+  if(wave>=6 && roll<.24) return {kind:'bomber',r:16,hp:6+Math.floor(wave/2),speed:.48+wave*.008,coins:9};
+  if(wave>=5 && roll<.38) return {kind:'brute',r:19,hp:9+wave,speed:.35+wave*.008,coins:8};
+  if(wave>=3 && roll<.58) return {kind:'runner',r:10,hp:2+Math.floor(wave/3),speed:.95+wave*.012,coins:4};
   return {kind:'raider',r:13,hp:3+Math.floor(wave/2),speed:.55+wave*.01,coins:3};
 }
 function spawnEnemy(){
@@ -187,7 +189,7 @@ function update(){
     e.y+=Math.sin(ang)*e.speed;
 
     if(e.y>tower.y-5 && Math.abs(e.x-tower.x)<tower.w/2){
-      const baseDamage=e.kind==='brute'?.24:.12;
+      const baseDamage=e.kind==='tank'?0.34:e.kind==='bomber'?0.28:e.kind==='brute'?.24:.12;
       player.hp-=baseDamage*(1-towerArmor);
       e.y=tower.y+8;
     }
@@ -279,10 +281,13 @@ function drawEnemy(e){
     ctx.globalAlpha=1;
   }
   ctx.fillStyle='#0005';ctx.beginPath();ctx.ellipse(0,e.r+7,e.r,5,0,0,Math.PI*2);ctx.fill();
-  const body=e.kind==='brute'?'#8c5b3e':e.kind==='runner'?'#b58a42':'#596875';
+  const body=e.kind==='tank'?'#4b5968':e.kind==='bomber'?'#8d4d45':e.kind==='brute'?'#8c5b3e':e.kind==='runner'?'#b58a42':'#596875';
   ctx.fillStyle=body;ctx.fillRect(-e.r*.72,-e.r*.55,e.r*1.44,e.r*1.5);
   ctx.fillStyle='#c6a37a';ctx.beginPath();ctx.arc(0,-e.r*.85,e.r*.62,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#20262d';ctx.fillRect(-e.r*.52,-e.r*1.02,e.r*1.04,5);
+  ctx.fillStyle=e.kind==='bomber'?'#e0b04b':'#20262d';ctx.fillRect(-e.r*.52,-e.r*1.02,e.r*1.04,5);
+  if(e.kind==='tank'){
+    ctx.strokeStyle='#aeb8c2';ctx.lineWidth=3;ctx.strokeRect(-e.r*.78,-e.r*.6,e.r*1.56,e.r*1.55);
+  }
   // health bar
   ctx.fillStyle='#171b20';ctx.fillRect(-e.r,-e.r*1.7,e.r*2,4);
   ctx.fillStyle='#d36b58';ctx.fillRect(-e.r,-e.r*1.7,e.r*2*(e.hp/e.maxHp),4);
