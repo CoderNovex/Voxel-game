@@ -80,6 +80,7 @@ const tower={x:W/2,y:H-105,w:330,h:100};
 let arrows=[],enemies=[],particles=[];
 let coins=0,kills=0,wave=1,waveActive=false,waveTimer=0,spawnLeft=0;
 let gameOver=false,paused=false;
+let cheatBuffer='',testMode=false;
 let fireUnlocked=false,fireEnabled=false;
 let rainUnlocked=false,rainCooldown=0,rainActive=false;
 let towerMaxHp=100,towerArmor=0;
@@ -107,7 +108,29 @@ addEventListener('keydown',e=>{
   if(e.key.toLowerCase()==='r' && gameOver) reset();
   if(e.key.toLowerCase()==='p') paused=!paused;
 });
-addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+addEventListener('keyup',e=>{
+  keys.delete(e.key.toLowerCase());
+  if(e.key.length===1){
+    cheatBuffer=(cheatBuffer+e.key.toUpperCase()).slice(-8);
+    if(cheatBuffer==='TESTMODE'){
+      testMode=true;
+      coins=10000;
+      towerMaxHp=500;
+      player.hp=500;
+      fireUnlocked=true;
+      fireEnabled=true;
+      rainUnlocked=true;
+      tree={volley:true,pierce:true,inferno:true,fortress:true};
+      up.arrows.level=5;
+      up.damage.level=8;
+      up.speed.level=8;
+      up.range.level=8;
+      towerArmor=.5;
+      updateUI();
+      cheatBuffer='';
+    }
+  }
+});
 canvas.addEventListener('pointermove',e=>{
   const r=canvas.getBoundingClientRect();
   mouse.x=(e.clientX-r.left)*W/r.width;
@@ -346,6 +369,10 @@ function draw(){
 
   ctx.fillStyle='#fff';ctx.font='bold 14px system-ui';
   ctx.fillText(waveActive?'WAVE INCOMING':'TOWER SECURE',18,27);
+  if(testMode){
+    ctx.fillStyle='#ffe066';ctx.font='bold 12px system-ui';
+    ctx.fillText('🧪 TEST MODE — type TESTMODE again to refill',18,66);
+  }
   if(!waveActive && enemies.length===0){
     ctx.fillStyle='#d7c49b';ctx.font='12px system-ui';
     ctx.fillText('Next wave begins automatically',18,47);
