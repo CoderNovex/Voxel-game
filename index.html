@@ -20,6 +20,11 @@ button{border:1px solid #46515e;background:#202833;color:#f4f1e8;border-radius:7
 button:hover{background:#2a3440}
 button:disabled{opacity:.45;cursor:not-allowed}
 #hint{margin-top:8px;color:#9da7b0;font-size:12px;line-height:1.45}
+#tree{display:none;margin-top:9px;padding:10px;background:#171d24;border:1px solid #3b4652;border-radius:9px}
+#tree.open{display:block}
+#tree h3{margin:0 0 8px;font-size:14px}
+.treeRow{display:flex;gap:7px;flex-wrap:wrap}
+.node{font-size:11px;padding:6px 8px}
 kbd{background:#202833;border:1px solid #46515e;border-radius:4px;padding:2px 5px;color:#fff}
 </style>
 </head>
@@ -46,6 +51,17 @@ kbd{background:#202833;border:1px solid #46515e;border-radius:4px;padding:2px 5p
   <button id="fireArrow">🔥 Unlock Fire Arrow <b id="costFire">120</b>💰</button>
   <button id="reinforce">🧱 Reinforce Tower <b id="costReinforce">60</b>💰</button>
   <button id="armor">🛡️ Tower Armor <b id="costArmor">90</b>💰</button>
+  <button id="treeBtn">🌳 Upgrade Tree</button>
+</div>
+<div id="tree">
+  <h3>🌳 Upgrade Tree — unlock powerful branches</h3>
+  <div class="treeRow">
+    <button class="node" id="nodeVolley">🏹 Volley Master <b>180</b>💰</button>
+    <button class="node" id="nodePierce">🎯 Piercing Arrows <b>220</b>💰</button>
+    <button class="node" id="nodeInferno">🔥 Inferno Tips <b>200</b>💰</button>
+    <button class="node" id="nodeFortress">🏰 Fortress Core <b>250</b>💰</button>
+  </div>
+  <p id="treeStatus">Choose a branch. Each node can be unlocked once.</p>
 </div>
 <div id="hint">
   <kbd>Mouse</kbd> aim · <kbd>Left click</kbd> shoot · <kbd>WASD</kbd>/<kbd>Arrow keys</kbd> move on the platform ·
@@ -65,6 +81,7 @@ let coins=0,kills=0,wave=1,waveActive=false,waveTimer=0,spawnLeft=0;
 let gameOver=false,paused=false;
 let fireUnlocked=false,fireEnabled=false;
 let towerMaxHp=100,towerArmor=0;
+let tree={volley:false,pierce:false,inferno:false,fortress:false};
 
 
 const up={
@@ -200,8 +217,14 @@ function update(){
     for(const e of enemies){
       if(e.hp>0 && Math.hypot(a.x-e.x,a.y-e.y)<e.r+7){
         e.hp-=a.damage;
-        if(a.fire){e.burn=120;e.burnTick=0}
-        a.life=0;burst(e.x,e.y,a.fire?7:4);
+        if(tree.pierce && !e.pierced){
+          e.pierced=true;
+          a.life=1;
+        }else{
+          a.life=0;
+        }
+        if(a.fire){e.burn=tree.inferno?180:120;e.burnTick=0}
+        burst(e.x,e.y,a.fire?7:4);
         if(e.hp<=0){
           coins+=e.coins;kills++;burst(e.x,e.y,8);
         }
@@ -333,6 +356,10 @@ function updateUI(){
   $('hp').textContent=Math.max(0,Math.ceil(player.hp))+'/'+towerMaxHp;
   $('costReinforce').textContent=up.reinforce.cost;
   $('costArmor').textContent=up.armor.cost;
+  $('nodeVolley').disabled=tree.volley;
+  $('nodePierce').disabled=!tree.volley||tree.pierce;
+  $('nodeInferno').disabled=!fireUnlocked||tree.inferno;
+  $('nodeFortress').disabled=!tree.volley||tree.fortress;
   const fb=$('fireArrow');
   if(fireUnlocked){fb.innerHTML='🔥 Fire Arrow: '+(fireEnabled?'ON':'OFF');fb.title='Toggle fire arrows'}
   else fb.innerHTML='🔥 Unlock Fire Arrow <b id="costFire">120</b>💰';
@@ -365,6 +392,19 @@ $('range').onclick=()=>buy('range');
 $('heal').onclick=()=>buy('heal');
 $('reinforce').onclick=()=>buy('reinforce');
 $('armor').onclick=()=>buy('armor');
+$('treeBtn').onclick=()=>$('tree').classList.toggle('open');
+function treeBuy(type,cost){
+  if(coins<cost)return;
+  if(type==='volley'){coins-=cost;tree.volley=true;up.arrows.level++;up.arrows.cost=Math.floor(up.arrows.cost*1.35);}
+  if(type==='pierce'&&tree.volley){coins-=cost;tree.pierce=true;}
+  if(type==='inferno'&&fireUnlocked){coins-=cost;tree.inferno=true;}
+  if(type==='fortress'&&tree.volley){coins-=cost;tree.fortress=true;towerMaxHp+=75;player.hp+=75;towerArmor=Math.min(.75,towerArmor+.10);}
+  updateUI();
+}
+$('nodeVolley').onclick=()=>treeBuy('volley',180);
+$('nodePierce').onclick=()=>treeBuy('pierce',220);
+$('nodeInferno').onclick=()=>treeBuy('inferno',200);
+$('nodeFortress').onclick=()=>treeBuy('fortress',250);
 $('fireArrow').onclick=()=>{
   if(!fireUnlocked && coins>=120){coins-=120;fireUnlocked=true;fireEnabled=true}
   else if(fireUnlocked){fireEnabled=!fireEnabled}
@@ -373,7 +413,7 @@ $('fireArrow').onclick=()=>{
 
 function reset(){
   player.x=W/2;player.y=H-125;player.hp=100;arrows=[];enemies=[];particles=[];
-  towerMaxHp=100;towerArmor=0;
+  towerMaxHp=100;towerArmor=0;tree={volley:false,pierce:false,inferno:false,fortress:false};
   coins=0;kills=0;wave=1;waveActive=false;waveTimer=0;spawnLeft=0;gameOver=false;paused=false;
   up.arrows={level:1,cost:30};up.damage={level:1,cost:35};up.speed={level:1,cost:40};up.range={level:1,cost:45};up.heal={cost:25};up.reinforce={cost:60};up.armor={cost:90};
   updateUI();startWave();
