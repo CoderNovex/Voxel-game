@@ -562,6 +562,7 @@ function drawBackground(){
   const fb=$('fireArrow');
   if(fireUnlocked){fb.querySelector('b').textContent='FIRE ARROWS: '+(fireEnabled?'ON':'OFF');fb.querySelector('strong').textContent='TOGGLE'}
   else {fb.querySelector('b').textContent='FIRE ARROWS';fb.querySelector('strong').textContent='120'}
+}
 function buy(type){
   if(type==='heal'){
     if(coins>=up.heal.cost && player.hp<towerMaxHp){
