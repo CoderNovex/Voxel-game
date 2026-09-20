@@ -52,6 +52,7 @@ kbd{background:#202833;border:1px solid #46515e;border-radius:4px;padding:2px 5p
   <button id="reinforce">🧱 Reinforce Tower <b id="costReinforce">60</b>💰</button>
   <button id="armor">🛡️ Tower Armor <b id="costArmor">90</b>💰</button>
   <button id="treeBtn">🌳 Upgrade Tree</button>
+  <button id="rain">☄️ Rain of Arrows <b id="rainStatus">READY</b></button>
 </div>
 <div id="tree">
   <h3>🌳 Upgrade Tree — unlock powerful branches</h3>
@@ -80,6 +81,7 @@ let arrows=[],enemies=[],particles=[];
 let coins=0,kills=0,wave=1,waveActive=false,waveTimer=0,spawnLeft=0;
 let gameOver=false,paused=false;
 let fireUnlocked=false,fireEnabled=false;
+let rainUnlocked=false,rainCooldown=0,rainActive=false;
 let towerMaxHp=100,towerArmor=0;
 let tree={volley:false,pierce:false,inferno:false,fortress:false};
 
@@ -174,6 +176,17 @@ function update(){
 
   if(mouse.down)fire();
   if(player.cool>0)player.cool--;
+  if(rainCooldown>0)rainCooldown--;
+  if(rainActive){
+    if(Math.random()<0.28){
+      const x=rnd(25,W-25), y=rnd(70,330);
+      const target=enemies.length?enemies[Math.floor(Math.random()*enemies.length)]:null;
+      const tx=target?target.x:x, ty=target?target.y:y;
+      arrows.push({x:tx,y:-20,vx:0,vy:7,life:90,damage:up.damage.level*2.5,fire:fireEnabled,meteor:true});
+    }
+    rainActive=false;
+    rainCooldown=420;
+  }
 
   if(waveActive){
     waveTimer--;
@@ -287,6 +300,11 @@ function drawCharacter(){
 function drawArrow(a){
   const ang=Math.atan2(a.vy,a.vx);
   ctx.save();ctx.translate(a.x,a.y);ctx.rotate(ang);
+  if(a.meteor){
+    ctx.globalAlpha=.35;ctx.fillStyle='#ffd166';ctx.beginPath();ctx.arc(0,0,14,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+    ctx.strokeStyle='#fff1b8';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-10,-16);ctx.lineTo(8,12);ctx.stroke();
+    ctx.restore();return;
+  }
   if(a.fire){
     ctx.globalAlpha=.55;ctx.fillStyle='#ff8a22';ctx.beginPath();ctx.arc(-7,0,9,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
   }
@@ -360,6 +378,9 @@ function updateUI(){
   $('nodePierce').disabled=!tree.volley||tree.pierce;
   $('nodeInferno').disabled=!fireUnlocked||tree.inferno;
   $('nodeFortress').disabled=!tree.volley||tree.fortress;
+  const rb=$('rain');
+  if(!rainUnlocked) rb.innerHTML='☄️ Unlock Rain of Arrows <b>300</b>💰';
+  else rb.innerHTML='☄️ Rain of Arrows <b id="rainStatus">'+(rainCooldown>0?Math.ceil(rainCooldown/60)+'s':'READY')+'</b>';
   const fb=$('fireArrow');
   if(fireUnlocked){fb.innerHTML='🔥 Fire Arrow: '+(fireEnabled?'ON':'OFF');fb.title='Toggle fire arrows'}
   else fb.innerHTML='🔥 Unlock Fire Arrow <b id="costFire">120</b>💰';
@@ -393,6 +414,11 @@ $('heal').onclick=()=>buy('heal');
 $('reinforce').onclick=()=>buy('reinforce');
 $('armor').onclick=()=>buy('armor');
 $('treeBtn').onclick=()=>$('tree').classList.toggle('open');
+$('rain').onclick=()=>{
+  if(!rainUnlocked && coins>=300){coins-=300;rainUnlocked=true;rainActive=true}
+  else if(rainUnlocked && rainCooldown<=0)rainActive=true;
+  updateUI();
+};
 function treeBuy(type,cost){
   if(coins<cost)return;
   if(type==='volley'){coins-=cost;tree.volley=true;up.arrows.level++;up.arrows.cost=Math.floor(up.arrows.cost*1.35);}
@@ -414,6 +440,7 @@ $('fireArrow').onclick=()=>{
 function reset(){
   player.x=W/2;player.y=H-125;player.hp=100;arrows=[];enemies=[];particles=[];
   towerMaxHp=100;towerArmor=0;tree={volley:false,pierce:false,inferno:false,fortress:false};
+  rainUnlocked=false;rainCooldown=0;rainActive=false;
   coins=0;kills=0;wave=1;waveActive=false;waveTimer=0;spawnLeft=0;gameOver=false;paused=false;
   up.arrows={level:1,cost:30};up.damage={level:1,cost:35};up.speed={level:1,cost:40};up.range={level:1,cost:45};up.heal={cost:25};up.reinforce={cost:60};up.armor={cost:90};
   updateUI();startWave();
