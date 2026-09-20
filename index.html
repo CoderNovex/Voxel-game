@@ -427,7 +427,7 @@ function drawBackground(){
   ctx.fillStyle='#0009';ctx.beginPath();ctx.ellipse(0,e.r+8,e.r+4,6,0,0,Math.PI*2);ctx.fill();
   // silhouette
   ctx.fillStyle='#17232e';ctx.fillRect(-e.r*.8,-e.r*.5,e.r*1.6,e.r*1.55);
-  ctx.fillStyle=c;ctx.fillRect(-e.r*.55,-e.r*.75,e.r*1.1,e*.0+e.r*1.05);
+  ctx.fillStyle=c;ctx.fillRect(-e.r*.55,-e.r*.75,e.r*1.1,e.r*1.05);
   ctx.fillStyle='#b9c7d0';ctx.beginPath();ctx.arc(0,-e.r*.9,e.r*.6,0,Math.PI*2);ctx.fill();
   ctx.fillStyle=c;ctx.fillRect(-e.r*.42,-e.r*.98,e.r*.84,5);
   if(e.kind==='tank'){ctx.strokeStyle='#b79cff';ctx.lineWidth=3;ctx.strokeRect(-e.r*.82,-e.r*.65,e.r*1.64,e.r*1.7)}
