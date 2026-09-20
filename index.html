@@ -44,6 +44,8 @@ kbd{background:#202833;border:1px solid #46515e;border-radius:4px;padding:2px 5p
   <button id="range">🎯 Range <b id="costRange">45</b>💰</button>
   <button id="heal">❤️ Repair <b id="costHeal">25</b>💰</button>
   <button id="fireArrow">🔥 Unlock Fire Arrow <b id="costFire">120</b>💰</button>
+  <button id="reinforce">🧱 Reinforce Tower <b id="costReinforce">60</b>💰</button>
+  <button id="armor">🛡️ Tower Armor <b id="costArmor">90</b>💰</button>
 </div>
 <div id="hint">
   <kbd>Mouse</kbd> aim · <kbd>Left click</kbd> shoot · <kbd>WASD</kbd>/<kbd>Arrow keys</kbd> move on the platform ·
@@ -62,13 +64,17 @@ let arrows=[],enemies=[],particles=[];
 let coins=0,kills=0,wave=1,waveActive=false,waveTimer=0,spawnLeft=0;
 let gameOver=false,paused=false;
 let fireUnlocked=false,fireEnabled=false;
+let towerMaxHp=100,towerArmor=0;
+
 
 const up={
   arrows:{level:1,cost:30},
   damage:{level:1,cost:35},
   speed:{level:1,cost:40},
   range:{level:1,cost:45},
-  heal:{cost:25}
+  heal:{cost:25},
+  reinforce:{cost:60},
+  armor:{cost:90}
 };
 
 function $(id){return document.getElementById(id)}
@@ -181,7 +187,8 @@ function update(){
     e.y+=Math.sin(ang)*e.speed;
 
     if(e.y>tower.y-5 && Math.abs(e.x-tower.x)<tower.w/2){
-      player.hp-=e.kind==='brute'?.24:.12;
+      const baseDamage=e.kind==='brute'?.24:.12;
+      player.hp-=baseDamage*(1-towerArmor);
       e.y=tower.y+8;
     }
   });
@@ -310,7 +317,6 @@ function draw(){
   }
 }
 function updateUI(){
-  $('hp').textContent=Math.max(0,Math.ceil(player.hp));
   $('coins').textContent=Math.floor(coins);
   $('wave').textContent=wave;
   $('kills').textContent=kills;
@@ -319,14 +325,25 @@ function updateUI(){
   $('costSpeed').textContent=up.speed.cost;
   $('costRange').textContent=up.range.cost;
   $('costHeal').textContent=up.heal.cost;
+  $('hp').textContent=Math.max(0,Math.ceil(player.hp))+'/'+towerMaxHp;
+  $('costReinforce').textContent=up.reinforce.cost;
+  $('costArmor').textContent=up.armor.cost;
   const fb=$('fireArrow');
   if(fireUnlocked){fb.innerHTML='🔥 Fire Arrow: '+(fireEnabled?'ON':'OFF');fb.title='Toggle fire arrows'}
   else fb.innerHTML='🔥 Unlock Fire Arrow <b id="costFire">120</b>💰';
 }
 function buy(type){
   if(type==='heal'){
-    if(coins>=up.heal.cost && player.hp<100){
-      coins-=up.heal.cost;player.hp=Math.min(100,player.hp+30);up.heal.cost+=10;
+    if(coins>=up.heal.cost && player.hp<towerMaxHp){
+      coins-=up.heal.cost;player.hp=Math.min(towerMaxHp,player.hp+30);up.heal.cost+=10;
+    }
+  }else if(type==='reinforce'){
+    if(coins>=up.reinforce.cost){
+      coins-=up.reinforce.cost;towerMaxHp+=25;player.hp+=25;up.reinforce.cost=Math.floor(up.reinforce.cost*1.55);
+    }
+  }else if(type==='armor'){
+    if(coins>=up.armor.cost && towerArmor<0.75){
+      coins-=up.armor.cost;towerArmor=Math.min(0.75,towerArmor+0.10);up.armor.cost=Math.floor(up.armor.cost*1.65);
     }
   }else{
     const u=up[type];
@@ -341,6 +358,8 @@ $('damage').onclick=()=>buy('damage');
 $('speed').onclick=()=>buy('speed');
 $('range').onclick=()=>buy('range');
 $('heal').onclick=()=>buy('heal');
+$('reinforce').onclick=()=>buy('reinforce');
+$('armor').onclick=()=>buy('armor');
 $('fireArrow').onclick=()=>{
   if(!fireUnlocked && coins>=120){coins-=120;fireUnlocked=true;fireEnabled=true}
   else if(fireUnlocked){fireEnabled=!fireEnabled}
@@ -349,8 +368,9 @@ $('fireArrow').onclick=()=>{
 
 function reset(){
   player.x=W/2;player.y=H-125;player.hp=100;arrows=[];enemies=[];particles=[];
+  towerMaxHp=100;towerArmor=0;
   coins=0;kills=0;wave=1;waveActive=false;waveTimer=0;spawnLeft=0;gameOver=false;paused=false;
-  up.arrows={level:1,cost:30};up.damage={level:1,cost:35};up.speed={level:1,cost:40};up.range={level:1,cost:45};up.heal={cost:25};
+  up.arrows={level:1,cost:30};up.damage={level:1,cost:35};up.speed={level:1,cost:40};up.range={level:1,cost:45};up.heal={cost:25};up.reinforce={cost:60};up.armor={cost:90};
   updateUI();startWave();
 }
 updateUI();startWave();
