@@ -43,6 +43,7 @@ kbd{background:#202833;border:1px solid #46515e;border-radius:4px;padding:2px 5p
   <button id="speed">⚡ Arrow speed <b id="costSpeed">40</b>💰</button>
   <button id="range">🎯 Range <b id="costRange">45</b>💰</button>
   <button id="heal">❤️ Repair <b id="costHeal">25</b>💰</button>
+  <button id="fireArrow">🔥 Unlock Fire Arrow <b id="costFire">120</b>💰</button>
 </div>
 <div id="hint">
   <kbd>Mouse</kbd> aim · <kbd>Left click</kbd> shoot · <kbd>WASD</kbd>/<kbd>Arrow keys</kbd> move on the platform ·
@@ -60,6 +61,7 @@ const tower={x:W/2,y:H-105,w:330,h:100};
 let arrows=[],enemies=[],particles=[];
 let coins=0,kills=0,wave=1,waveActive=false,waveTimer=0,spawnLeft=0;
 let gameOver=false,paused=false;
+let fireUnlocked=false,fireEnabled=false;
 
 const up={
   arrows:{level:1,cost:30},
@@ -121,7 +123,7 @@ function fire(){
       x:player.x+Math.cos(ang)*25,y:player.y+Math.sin(ang)*25,
       vx:Math.cos(ang)*(6+up.speed.level*.8),
       vy:Math.sin(ang)*(6+up.speed.level*.8),
-      life:up.range.level*48,damage:up.damage.level
+      life:up.range.level*48,damage:up.damage.level,fire:fireEnabled
     });
   }
   player.cool=Math.max(4,14-up.speed.level*1.2);
@@ -166,6 +168,11 @@ function update(){
   arrows=arrows.filter(a=>a.life>0&&a.x>-30&&a.x<W+30&&a.y>-30&&a.y<H+30);
 
   enemies.forEach(e=>{
+    if(e.burn>0){
+      e.burn--;
+      e.burnTick=(e.burnTick||0)+1;
+      if(e.burnTick>=30){e.hp-=1;e.burnTick=0;burst(e.x,e.y,3)}
+    }
     const ang=Math.atan2((tower.y+4)-e.y,tower.x-e.x);
     e.x+=Math.cos(ang)*e.speed;
     e.y+=Math.sin(ang)*e.speed;
@@ -181,7 +188,8 @@ function update(){
     for(const e of enemies){
       if(e.hp>0 && Math.hypot(a.x-e.x,a.y-e.y)<e.r+7){
         e.hp-=a.damage;
-        a.life=0;burst(e.x,e.y,4);
+        if(a.fire){e.burn=120;e.burnTick=0}
+        a.life=0;burst(e.x,e.y,a.fire?7:4);
         if(e.hp<=0){
           coins+=e.coins;kills++;burst(e.x,e.y,8);
         }
@@ -244,13 +252,22 @@ function drawCharacter(){
 function drawArrow(a){
   const ang=Math.atan2(a.vy,a.vx);
   ctx.save();ctx.translate(a.x,a.y);ctx.rotate(ang);
-  ctx.strokeStyle='#eee9dc';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-13,0);ctx.lineTo(9,0);ctx.stroke();
+  if(a.fire){
+    ctx.globalAlpha=.55;ctx.fillStyle='#ff8a22';ctx.beginPath();ctx.arc(-7,0,9,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+  }
+  ctx.strokeStyle=a.fire?'#ffd166':'#eee9dc';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-13,0);ctx.lineTo(9,0);ctx.stroke();
   ctx.fillStyle='#d9a441';ctx.beginPath();ctx.moveTo(11,0);ctx.lineTo(2,-5);ctx.lineTo(4,0);ctx.lineTo(2,5);ctx.closePath();ctx.fill();
   ctx.fillStyle='#7d5132';ctx.beginPath();ctx.moveTo(-12,0);ctx.lineTo(-18,-5);ctx.lineTo(-16,0);ctx.lineTo(-18,5);ctx.closePath();ctx.fill();
   ctx.restore();
 }
 function drawEnemy(e){
   ctx.save();ctx.translate(e.x,e.y);
+  if(e.burn>0){
+    ctx.globalAlpha=.8;
+    ctx.fillStyle='#ff7a18';
+    ctx.beginPath();ctx.arc(-e.r*.7,-e.r*.8,4+Math.sin(performance.now()/70)*2,0,Math.PI*2);ctx.arc(e.r*.55,-e.r*.9,3,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;
+  }
   ctx.fillStyle='#0005';ctx.beginPath();ctx.ellipse(0,e.r+7,e.r,5,0,0,Math.PI*2);ctx.fill();
   const body=e.kind==='brute'?'#8c5b3e':e.kind==='runner'?'#b58a42':'#596875';
   ctx.fillStyle=body;ctx.fillRect(-e.r*.72,-e.r*.55,e.r*1.44,e.r*1.5);
@@ -299,6 +316,9 @@ function updateUI(){
   $('costSpeed').textContent=up.speed.cost;
   $('costRange').textContent=up.range.cost;
   $('costHeal').textContent=up.heal.cost;
+  const fb=$('fireArrow');
+  if(fireUnlocked){fb.innerHTML='🔥 Fire Arrow: '+(fireEnabled?'ON':'OFF');fb.title='Toggle fire arrows'}
+  else fb.innerHTML='🔥 Unlock Fire Arrow <b id="costFire">120</b>💰';
 }
 function buy(type){
   if(type==='heal'){
@@ -318,6 +338,11 @@ $('damage').onclick=()=>buy('damage');
 $('speed').onclick=()=>buy('speed');
 $('range').onclick=()=>buy('range');
 $('heal').onclick=()=>buy('heal');
+$('fireArrow').onclick=()=>{
+  if(!fireUnlocked && coins>=120){coins-=120;fireUnlocked=true;fireEnabled=true}
+  else if(fireUnlocked){fireEnabled=!fireEnabled}
+  updateUI();
+};
 
 function reset(){
   player.x=W/2;player.y=H-125;player.hp=100;arrows=[];enemies=[];particles=[];
