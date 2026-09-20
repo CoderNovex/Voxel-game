@@ -147,6 +147,7 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:16/10;background:#11182
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 const W=canvas.width,H=canvas.height;
 const keys=new Set(),mouse={x:W/2,y:H/2,down:false};
+let charge=0;
 const player={x:W/2,y:H-125,hp:100,cool:0};
 const tower={x:W/2,y:H-105,w:330,h:100};
 let arrows=[],enemies=[],particles=[];
@@ -208,8 +209,12 @@ canvas.addEventListener('pointermove',e=>{
   mouse.x=(e.clientX-r.left)*W/r.width;
   mouse.y=(e.clientY-r.top)*H/r.height;
 });
-canvas.addEventListener('pointerdown',()=>mouse.down=true);
-addEventListener('pointerup',()=>mouse.down=false);
+canvas.addEventListener('pointerdown',()=>{if(!gameOver&&!paused){mouse.down=true;charge=0}});
+addEventListener('pointerup',()=>{
+  if(mouse.down&&!gameOver&&!paused) fire();
+  mouse.down=false;
+  charge=0;
+});
 
 function enemyType(){
   const roll=Math.random();
@@ -237,6 +242,7 @@ function fire(){
   if(gameOver||paused||player.cool>0)return;
   const a=Math.atan2(mouse.y-player.y,mouse.x-player.x);
   const count=up.arrows.level;
+  const power=.55+Math.min(1.45,charge/100*1.45);
   const spread=count===1?0:.10;
   for(let i=0;i<count;i++){
     const offset=(i-(count-1)/2)*spread;
@@ -245,7 +251,7 @@ function fire(){
       x:player.x+Math.cos(ang)*25,y:player.y+Math.sin(ang)*25,
       vx:Math.cos(ang)*(6+up.speed.level*.8),
       vy:Math.sin(ang)*(6+up.speed.level*.8),
-      life:up.range.level*48,damage:up.damage.level,fire:fireEnabled
+      life:up.range.level*48,damage:up.damage.level*power,fire:fireEnabled
     });
   }
   player.cool=Math.max(4,14-up.speed.level*1.2);
@@ -269,7 +275,11 @@ function update(){
   player.x=clamp(player.x,tower.x-tower.w/2+28,tower.x+tower.w/2-28);
   player.y=clamp(player.y,tower.y-18,tower.y+tower.h-24);
 
-  if(mouse.down)fire();
+  if(mouse.down){
+    charge=Math.min(100,charge+2.2);
+  }else{
+    charge=Math.max(0,charge-1.8);
+  }
   if(player.cool>0)player.cool--;
   if(rainCooldown>0)rainCooldown--;
   if(rainActive){
@@ -352,94 +362,62 @@ function update(){
 }
 
 function drawBackground(){
-  // Deep sci-fi night sky
   const g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,'#06101d');g.addColorStop(.48,'#0b1a28');g.addColorStop(1,'#111a22');
+  g.addColorStop(0,'#3b3c3e');g.addColorStop(1,'#252729');
   ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
 
-  // Moon / atmospheric glow
-  ctx.globalAlpha=.16;ctx.fillStyle='#8fc9ff';ctx.beginPath();ctx.arc(820,92,62,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
-  ctx.fillStyle='#dcecff';ctx.beginPath();ctx.arc(820,92,30,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#9ab0c7';ctx.fillRect(808,77,8,5);ctx.fillRect(828,101,11,6);ctx.fillRect(799,102,6,4);
-
-  // Stars / skyline
-  for(let i=0;i<70;i++){
-    const x=(i*137+23)%W,y=(i*71+19)%230;
-    ctx.fillStyle=i%5===0?'#bfe2ff':'#54718a';
-    ctx.fillRect(x,y,1+(i%2),1+(i%2));
-  }
-  for(let i=0;i<15;i++){
-    const x=i*70-25, bh=55+(i*37)%105;
-    ctx.fillStyle=i%2?'#0e1b27':'#101f2d';
-    ctx.fillRect(x,215-bh,58,bh);
-    ctx.fillStyle='#24415a';
-    for(let yy=230-bh;yy<210;yy+=16)for(let xx=x+8;xx<x+50;xx+=15)
-      if(((xx+yy+i)%3)!==0)ctx.fillRect(xx,yy,5,4);
+  // Sparse dust/star pixels like the reference game.
+  for(let i=0;i<65;i++){
+    const x=(i*149+31)%W,y=(i*83+17)%H;
+    ctx.fillStyle=i%4===0?'#77797b':'#55575a';
+    ctx.fillRect(x,y,1,1);
   }
 
-  // Main battlefield / road
-  ctx.fillStyle='#0a1118';ctx.fillRect(0,230,W,H-230);
-  ctx.fillStyle='#18232d';ctx.fillRect(0,270,W,150);
-  ctx.fillStyle='#25343f';ctx.fillRect(0,350,W,5);
-  ctx.fillStyle='#51606a';
-  for(let x=-30;x<W;x+=115)ctx.fillRect(x,336,58,5);
-  ctx.fillStyle='#0b151d';ctx.fillRect(0,420,W,H-420);
+  // Ground / distant platform.
+  ctx.fillStyle='#292b2d';ctx.fillRect(0,H-105,W,105);
+  ctx.fillStyle='#454749';ctx.fillRect(0,H-106,W,3);
 
-  // Distant barricades
-  for(let x=30;x<W;x+=150){
-    ctx.fillStyle='#243440';ctx.fillRect(x,388,85,22);
-    ctx.fillStyle='#4d6472';ctx.fillRect(x+8,382,18,7);ctx.fillRect(x+34,378,18,11);ctx.fillRect(x+60,384,18,5);
-  }
-
-  // Tower base, chunky pixel-art masonry
+  // Main stone tower centered in the playfield.
   const tx=tower.x-tower.w/2;
-  ctx.fillStyle='#080e14';ctx.fillRect(tx-7,tower.y-4,tower.w+14,tower.h+14);
-  ctx.fillStyle='#263542';ctx.fillRect(tx,tower.y,tower.w,tower.h);
-  ctx.fillStyle='#425767';ctx.fillRect(tx,tower.y,tower.w,15);
-  ctx.fillStyle='#718795';ctx.fillRect(tx+8,tower.y+4,tower.w-16,4);
-  for(let x=tx+12;x<tx+tower.w-8;x+=42){
-    ctx.fillStyle='#17242f';ctx.fillRect(x,tower.y+28,28,43);
-    ctx.fillStyle='#314654';ctx.fillRect(x+4,tower.y+32,20,5);
+  ctx.fillStyle='#181a1c';ctx.fillRect(tx-5,tower.y+5,tower.w+10,tower.h+12);
+  ctx.fillStyle='#55585a';ctx.fillRect(tx,tower.y,tower.w,tower.h);
+  ctx.fillStyle='#6b6e70';ctx.fillRect(tx,tower.y,tower.w,15);
+  for(let row=0;row<3;row++){
+    for(let col=0;col<7;col++){
+      const bx=tx+8+col*46+(row%2)*22;
+      const by=tower.y+23+row*23;
+      ctx.fillStyle=(row+col)%3===0?'#3f4244':'#4a4d4f';
+      ctx.fillRect(bx,by,34,17);
+    }
   }
-  ctx.fillStyle='#536b7a';ctx.fillRect(tx+8,tower.y+78,tower.w-16,7);
+  // Top ledge.
+  ctx.fillStyle='#707274';ctx.fillRect(tx-7,tower.y-8,tower.w+14,12);
+  ctx.fillStyle='#3b3d3f';ctx.fillRect(tx-7,tower.y-8,tower.w+14,3);
 
-  // Archer platform
-  ctx.fillStyle='#080d13';ctx.fillRect(tower.x-39,tower.y-35,78,35);
-  ctx.fillStyle='#596d7a';ctx.fillRect(tower.x-34,tower.y-31,68,27);
-  ctx.fillStyle='#9aa9b2';ctx.fillRect(tower.x-27,tower.y-27,54,5);
-
-  // Tower health bar
+  // Tower HP.
   const hpPct=clamp(player.hp/towerMaxHp,0,1);
-  ctx.fillStyle='#050a0f';ctx.fillRect(tower.x-100,tower.y+92,200,10);
-  ctx.fillStyle=hpPct>.5?'#36d67a':hpPct>.25?'#f1b93b':'#ef4b4b';
-  ctx.fillRect(tower.x-98,tower.y+94,196*hpPct,6);
+  ctx.fillStyle='#1b1d1f';ctx.fillRect(tower.x-115,tower.y+105,230,9);
+  ctx.fillStyle=hpPct>.5?'#43d36d':hpPct>.25?'#e9b53b':'#ef4e55';
+  ctx.fillRect(tower.x-112,tower.y+108,224*hpPct,4);
+  ctx.fillStyle='#f0f0ed';ctx.font='700 11px "Courier New"';
+  ctx.textAlign='center';ctx.fillText('TOWER HP: '+Math.ceil(player.hp)+' / '+towerMaxHp,tower.x,tower.y+135);ctx.textAlign='left';
 
-  // UI panels inside the arena
-  ctx.fillStyle='#07111bde';ctx.fillRect(14,14,260,72);
-  ctx.strokeStyle='#31516a';ctx.strokeRect(14,14,260,72);
-  ctx.fillStyle='#f0f5fb';ctx.font='700 18px "Courier New"';ctx.fillText('CONTROL AREA',28,39);
-  ctx.fillStyle='#6e879d';ctx.font='700 10px "Courier New"';ctx.fillText('AIM  •  HOLD  •  RELEASE',28,58);
-  ctx.fillStyle='#26a9ff';ctx.fillText('STAMINA SYSTEM ONLINE',28,75);
+  // Wave marker in the corner, intentionally subtle.
+  ctx.fillStyle='#eee';ctx.font='700 12px "Courier New"';
+  ctx.fillText('WAVE '+wave,18,24);
+  ctx.fillStyle='#ffbd31';ctx.fillText('● '+enemies.length,18,42);
 
-  // Wave panel
-  ctx.fillStyle='#07111bde';ctx.fillRect(W-255,14,241,72);
-  ctx.strokeStyle='#31516a';ctx.strokeRect(W-255,14,241,72);
-  ctx.fillStyle='#f1b83c';ctx.font='700 17px "Courier New"';ctx.fillText('WAVE '+wave,W-240,39);
-  ctx.fillStyle='#e9f2fa';ctx.font='700 11px "Courier New"';ctx.fillText('ENEMIES  '+enemies.length,W-240,59);
-  ctx.fillStyle='#6e879d';ctx.fillText(waveActive?'THREAT DETECTED':'NEXT WAVE READY',W-240,76);
-
-  // Upgrade/status strip
-  ctx.fillStyle='#07111bd9';ctx.fillRect(292,14,376,44);
-  ctx.strokeStyle='#31516a';ctx.strokeRect(292,14,376,44);
-  ctx.fillStyle='#f4f7fb';ctx.font='700 11px "Courier New"';
-  ctx.fillText('ARROWS '+up.arrows.level,308,32);
-  ctx.fillStyle='#ff6868';ctx.fillText('DMG '+up.damage.level,397,32);
-  ctx.fillStyle='#35c6ff';ctx.fillText('SPD '+up.speed.level,485,32);
-  ctx.fillStyle='#59e1b4';ctx.fillText('RNG '+up.range.level,571,32);
-  ctx.fillStyle='#f1f6fa';ctx.fillText('ARMOR '+Math.round(towerArmor*100)+'%',308,48);
-  ctx.fillStyle='#f1b83c';ctx.fillText('COINS '+Math.floor(coins),438,48);
-  ctx.fillStyle='#d8e4ef';ctx.fillText('KILLS '+kills,556,48);
-}function drawCharacter(){
+  // Charge/stamina meter follows the reference's hold-and-release mechanic.
+  if(mouse.down || charge>0){
+    const pct=clamp(charge/100,0,1);
+    ctx.fillStyle='#191b1d';ctx.fillRect(player.x-65,player.y-75,130,10);
+    ctx.fillStyle=pct>.75?'#ef4e55':pct>.45?'#f0b53a':'#3ca9ff';
+    ctx.fillRect(player.x-63,player.y-73,126*pct,6);
+    ctx.fillStyle='#f2f2ef';ctx.font='700 9px "Courier New"';ctx.textAlign='center';
+    ctx.fillText('STAMINA / CHARGE',player.x,player.y-80);ctx.textAlign='left';
+  }
+}
+function drawCharacter(){
   const ang=Math.atan2(mouse.y-player.y,mouse.x-player.x);
   ctx.save();ctx.translate(player.x,player.y);
   ctx.fillStyle='#0009';ctx.beginPath();ctx.ellipse(0,24,25,7,0,0,Math.PI*2);ctx.fill();
