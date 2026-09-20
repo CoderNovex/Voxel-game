@@ -178,11 +178,14 @@ function update(){
   if(player.cool>0)player.cool--;
   if(rainCooldown>0)rainCooldown--;
   if(rainActive){
-    if(Math.random()<0.28){
-      const x=rnd(25,W-25), y=rnd(70,330);
+    // Spawn a full storm of falling arrows.
+    for(let i=0;i<24;i++){
       const target=enemies.length?enemies[Math.floor(Math.random()*enemies.length)]:null;
-      const tx=target?target.x:x, ty=target?target.y:y;
-      arrows.push({x:tx,y:-20,vx:0,vy:7,life:90,damage:up.damage.level*2.5,fire:fireEnabled,meteor:true});
+      const tx=target ? target.x+rnd(-22,22) : rnd(25,W-25);
+      arrows.push({
+        x:tx,y:-25-rnd(0,180),vx:rnd(-.15,.15),vy:rnd(8,11),
+        life:90,damage:up.damage.level*2.5,fire:fireEnabled,meteor:true
+      });
     }
     rainActive=false;
     rainCooldown=420;
@@ -415,8 +418,11 @@ $('reinforce').onclick=()=>buy('reinforce');
 $('armor').onclick=()=>buy('armor');
 $('treeBtn').onclick=()=>$('tree').classList.toggle('open');
 $('rain').onclick=()=>{
-  if(!rainUnlocked && coins>=300){coins-=300;rainUnlocked=true;rainActive=true}
-  else if(rainUnlocked && rainCooldown<=0)rainActive=true;
+  if(!rainUnlocked){
+    if(coins>=300){coins-=300;rainUnlocked=true;rainActive=true;}
+  }else if(rainCooldown<=0 && !gameOver && !paused){
+    rainActive=true;
+  }
   updateUI();
 };
 function treeBuy(type,cost){
